@@ -19,6 +19,7 @@ private:
     vector<Viagem*> viagensAtivas;
 
     string tornarMinusculo(string str);
+    string formatarCapitalizar(string str) const;
 
 public:
     ~ControladorDeTransito();
@@ -27,11 +28,13 @@ public:
     Transporte* buscarTransporte(const string& nome);
     Passageiro* buscarPassageiro(const string& nome);
     
-    void cadastrarTransporte(const string& nome, char tipo, int cap, int vel, int distDesc, int tempoDesc, const string& cidadeInicial);
+    void cadastrarTransporte(const string& nome, char tipo, int cap, int vel, int horasDesc, int tempoDesc, const string& cidadeInicial);
     void cadastrarPassageiro(const string& nome, const string& cidadeInicial);
     void iniciarViagem(const string& nomeTransporte, const vector<string>& nomesPassageiros, const string& origem, const string& destino);
     void avancarTempo(int horas);
     void mostrarViagensEmAndamento() const;
+    void relatarLocalizacaoPassageiros() const;
+    void relatarLocalizacaoTransportes() const;
 };
 
 #endif

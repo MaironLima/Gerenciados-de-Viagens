@@ -8,7 +8,9 @@ using namespace std;
 
 extern unordered_map<string, unordered_map<string, int>> distancias;
 
-int getDistancia(const string& origem, const string& destino);
+extern unordered_map<string, unordered_map<string, int>> distanciasAereas;
+
+int getDistancia(const string& origem, const string& destino, char tipoTransporte);
 char getTipoTrajetoNecessario(const string& origem, const string& destino);
 
 #endif

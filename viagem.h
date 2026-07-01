@@ -18,21 +18,24 @@ private:
     
     int distanciaTotal;
     int kmPercorridos;
-    int kmDesdeUltimoDescanso;
+    int horasConsecutivasMovimento; 
     int horasRestantesDescanso;
     int tempoTotalEstimado;
     int horasPassadas;
 
+    string formatarCapitalizar(string str) const;
+
 public:
     Viagem(Transporte* v, vector<Passageiro*> p, Cidade* o, Cidade* d, int distTotal);
     
-    bool avancarUmaHora(); // Retorna true se a viagem chegou ao fim nesta hora
+    bool avancarUmaHora(); 
     void exibirEstado() const;
     
     Transporte* getVeiculo() const { return veiculo; }
     vector<Passageiro*> getPassageiros() const { return passageiros; }
     Cidade* getOrigem() const { return origem; }
     Cidade* getDestino() const { return destino; }
+    int getHorasPassadas() const { return horasPassadas; }
 };
 
 #endif
