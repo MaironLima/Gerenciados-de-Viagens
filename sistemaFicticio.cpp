@@ -1,82 +1,24 @@
 #include "SistemaFicticio.h"
+#include "modelosFicticios.h"
+#include "gerenciadorArquivos.h"
 #include <iostream>
 #include <algorithm>
 
 using namespace std;
 
-CidadeFicticia::CidadeFicticia(string n) : nome(n) {}
-string CidadeFicticia::getNome() const { return nome; }
-
-TrajetoFicticio::TrajetoFicticio(string o, string d, string t, int dist) : origem(o), destino(d), tipo(t), distancia(dist) {}
-string TrajetoFicticio::getOrigem() const { return origem; }
-string TrajetoFicticio::getDestino() const { return destino; }
-string TrajetoFicticio::getTipo() const { return tipo; }
-int TrajetoFicticio::getDistancia() const { return distancia; }
-
-TransporteFicticio::TransporteFicticio(string n, string t, int cap, int vel, int distDesc, int tempDesc, string localIni)
-    : nome(n), tipo(t), capacidade(cap), velocidade(vel), distEntreDescansos(distDesc), tempoDescanso(tempDesc), localAtual(localIni), emTransito(false) {}
-string TransporteFicticio::getNome() const { return nome; }
-string TransporteFicticio::getTipo() const { return tipo; }
-int TransporteFicticio::getCapacidade() const { return capacidade; }
-int TransporteFicticio::getVelocidade() const { return velocidade; }
-int TransporteFicticio::getDistEntreDescansos() const { return distEntreDescansos; }
-int TransporteFicticio::getTempoDescanso() const { return tempoDescanso; }
-string TransporteFicticio::getLocalAtual() const { return localAtual; }
-void TransporteFicticio::setLocalAtual(string local) { localAtual = local; }
-bool TransporteFicticio::isEmTransito() const { return emTransito; }
-void TransporteFicticio::setEmTransito(bool status) { emTransito = status; }
-
-PassageiroFicticio::PassageiroFicticio(string n, string localIni) : nome(n), localAtual(localIni), emTransito(false) {}
-string PassageiroFicticio::getNome() const { return nome; }
-string PassageiroFicticio::getLocalAtual() const { return localAtual; }
-void PassageiroFicticio::setLocalAtual(string local) { localAtual = local; }
-bool PassageiroFicticio::isEmTransito() const { return emTransito; }
-void PassageiroFicticio::setEmTransito(bool status) { emTransito = status; }
-
-ViagemFicticia::ViagemFicticia(TransporteFicticio* v, vector<PassageiroFicticio*> p, string o, string d, const vector<string>& rota, int distTotal)
-    : veiculo(v), passageiros(p), origem(o), destino(d), rotaCompleta(rota), distanciaTotal(distTotal), kmPercorridos(0), horasPassadas(0), concluida(false) {}
-
-void ViagemFicticia::avancarHora() {
-    if (concluida) return;
-    horasPassadas++;
-    kmPercorridos += veiculo->getVelocidade();
-    
-    if (kmPercorridos >= distanciaTotal) {
-        kmPercorridos = distanciaTotal;
-        concluida = true;
-        veiculo->setEmTransito(false);
-        veiculo->setLocalAtual(destino);
-        for (auto p : passageiros) {
-            p->setEmTransito(false);
-            p->setLocalAtual(destino);
-        }
-        cout << "\n>>> CHEGADA: O transporte \"" << veiculo->getNome() << "\" chegou ao destino final: " << destino << "!\n";
-    }
-}
-
-// Algoritmo de Busca com rastro de caminho para transitividade
 bool encontrarRotaComplexa(string atual, string destino, string tipoRequerido, const vector<TrajetoFicticio>& trajetos, vector<string>& caminho, int& distAcumulada) {
-    if (atual == destino) {
-        caminho.push_back(atual);
-        return true;
-    }
+    if (atual == destino) { caminho.push_back(atual); return true; }
     caminho.push_back(atual);
-
     for (const auto& t : trajetos) {
         if (t.getOrigem() == atual && t.getTipo() == tipoRequerido) {
             if (find(caminho.begin(), caminho.end(), t.getDestino()) == caminho.end()) {
-                int distOriginal = distAcumulada;
-                distAcumulada += t.getDistancia();
-                
-                if (encontrarRotaComplexa(t.getDestino(), destino, tipoRequerido, trajetos, caminho, distAcumulada)) {
-                    return true;
-                }
+                int distOriginal = distAcumulada; distAcumulada += t.getDistancia();
+                if (encontrarRotaComplexa(t.getDestino(), destino, tipoRequerido, trajetos, caminho, distAcumulada)) return true;
                 distAcumulada = distOriginal; 
             }
         }
     }
-    caminho.pop_back();
-    return false;
+    caminho.pop_back(); return false;
 }
 
 bool cidadeExiste(const vector<CidadeFicticia>& cidades, const string& nome) {
@@ -90,6 +32,8 @@ void executarSistemaFicticio() {
     vector<TransporteFicticio> transportesCadastrados;
     vector<PassageiroFicticio> passageirosCadastrados;
     vector<ViagemFicticia> viagensEmAndamento;
+
+    carregarDados(cidadesCadastradas, trajetosCadastrados, transportesCadastrados, passageirosCadastrados, viagensEmAndamento);
     int opcao = -1;
 
     while (opcao != 0) {
@@ -105,7 +49,7 @@ void executarSistemaFicticio() {
         cout << "7. Mostrar Todos os Passageiros Cadastrados\n";
         cout << "8. Mostrar Todos os Trajetos Cadastrados\n";
         cout << "9. Mostrar Viagens em Andamento\n";
-        cout << "10. Avancar Tempo (Horas)\n"; // Avançar tempo realocado para a última opção ativa
+        cout << "10. Avancar Tempo (Horas)\n";
         cout << "0. Sair\n";
         cout << "Escolha uma opcao: ";
         
@@ -124,9 +68,7 @@ void executarSistemaFicticio() {
             case 2: {
                 string o, d, t; int dist;
                 cout << "Origem: "; getline(cin, o); cout << "Destino: "; getline(cin, d);
-                if (!cidadeExiste(cidadesCadastradas, o) || !cidadeExiste(cidadesCadastradas, d)) {
-                    cout << "[ERRO] As cidades devem estar cadastradas.\n"; break;
-                }
+                if (!cidadeExiste(cidadesCadastradas, o) || !cidadeExiste(cidadesCadastradas, d)) { cout << "[ERRO] As cidades devem estar cadastradas.\n"; break; }
                 cout << "Tipo de Trajeto (A - Aquatico / T - Terrestre): "; char tc; cin >> tc;
                 t = (tc == 'A' || tc == 'a') ? "Aquatico" : "Terrestre";
                 cout << "Distancia (Km): "; cin >> dist; cin.ignore(10000, '\n');
@@ -140,17 +82,9 @@ void executarSistemaFicticio() {
                 cout << "Tipo (A - Aquatico / T - Terrestre): "; cin >> tc;
                 t = (tc == 'A' || tc == 'a') ? "Aquatico" : "Terrestre";
                 cout << "Capacidade: "; cin >> cap; cout << "Velocidade (km/h): "; cin >> vel;
-                
-                cout << "Distancia entre descansos em Km [0 para nunca parar]: "; 
-                cin >> distD;
-                
-                if (distD > 0) {
-                    cout << "Tempo de Descanso (horas): "; cin >> tempD;
-                } else {
-                    tempD = 0;
-                }
+                cout << "Distancia entre descansos em Km [0 para nunca parar]: "; cin >> distD;
+                if (distD > 0) { cout << "Tempo de Descanso (horas): "; cin >> tempD; }
                 cin.ignore(10000, '\n'); cout << "Cidade Inicial: "; getline(cin, c);
-                
                 if (!cidadeExiste(cidadesCadastradas, c)) { cout << "[ERRO] Cidade nao cadastrada.\n"; break; }
                 transportesCadastrados.push_back(TransporteFicticio(n, t, cap, vel, distD, tempD, c));
                 cout << "Transporte cadastrado com sucesso!\n";
@@ -164,11 +98,6 @@ void executarSistemaFicticio() {
                 cout << "Passageiro cadastrado com sucesso!\n";
                 break;
             }
-            case 6:
-                cout << "\n--- CIDADES CADASTRADAS --- \n";
-                if(cidadesCadastradas.empty()) cout << "Nenhuma cidade no sistema.\n";
-                for (size_t i = 0; i < cidadesCadastradas.size(); ++i) cout << i+1 << ". " << cidadesCadastradas[i].getNome() << "\n";
-                break;
             case 5: {
                 string o, d, transNome;
                 cout << "Cidade de Origem: "; getline(cin, o);
@@ -177,29 +106,18 @@ void executarSistemaFicticio() {
 
                 TransporteFicticio* veiculo = nullptr;
                 for (auto& tr : transportesCadastrados) { if (tr.getNome() == transNome) veiculo = &tr; }
-
-                if (!veiculo || veiculo->isEmTransito() || veiculo->getLocalAtual() != o) {
-                    cout << "[ERRO] Transporte indisponivel ou nao localizado na origem.\n"; break;
-                }
+                if (!veiculo || veiculo->isEmTransito() || veiculo->getLocalAtual() != o) { cout << "[ERRO] Transporte indisponivel.\n"; break; }
 
                 vector<string> caminhoRota; int distTotalCalculada = 0;
-                if (!encontrarRotaComplexa(o, d, veiculo->getTipo(), trajetosCadastrados, caminhoRota, distTotalCalculada)) {
-                    cout << "[ERRO] Nao existe rota de tipo [" << veiculo->getTipo() << "] entre " << o << " e " << d << ".\n"; break;
-                }
+                if (!encontrarRotaComplexa(o, d, veiculo->getTipo(), trajetosCadastrados, caminhoRota, distTotalCalculada)) { cout << "[ERRO] Sem rota valida.\n"; break; }
 
-                // Exibição da transitividade se passar por mais conexões
                 if (caminhoRota.size() > 2) {
-                    cout << "\n[TRANSITIVIDADE DETECTADA] A rota passara por: ";
-                    for(size_t i = 1; i < caminhoRota.size() - 1; ++i) {
-                        cout << "\"" << caminhoRota[i] << "\" ";
-                    }
+                    cout << "\n[TRANSITIVIDADE DETECTADA] Passara por: ";
+                    for(size_t i = 1; i < caminhoRota.size() - 1; ++i) cout << "\"" << caminhoRota[i] << "\" ";
                     cout << "\n";
                 }
-
-                cout << "Rota validada! Distancia total: " << distTotalCalculada << " Km.\n";
-                cout << "Quantidade de passageiros (Max " << veiculo->getCapacidade() << "): ";
+                cout << "Rota validada! Distancia: " << distTotalCalculada << " Km.\nQuantidade de passageiros: ";
                 int qtd; cin >> qtd; cin.ignore(10000, '\n');
-
                 if (qtd > veiculo->getCapacidade() || qtd <= 0) { cout << "[ERRO] Capacidade incompativel.\n"; break; }
 
                 vector<PassageiroFicticio*> selecionados;
@@ -208,19 +126,19 @@ void executarSistemaFicticio() {
                     PassageiroFicticio* pass = nullptr;
                     for (auto& p : passageirosCadastrados) { if (p.getNome() == pNome && p.getLocalAtual() == o && !p.isEmTransito()) pass = &p; }
                     if (pass) selecionados.push_back(pass);
-                    else { cout << "[AVISO] Passageiro indisponivel na origem.\n"; break; }
                 }
+                if ((int)selecionados.size() != qtd) { cout << "[AVISO] Abortado devido a passageiros invalidos.\n"; break; }
 
-                if ((int)selecionados.size() != qtd) break;
-
-                veiculo->setEmTransito(true);
-                veiculo->setLocalAtual("Em transito");
+                veiculo->setEmTransito(true); veiculo->setLocalAtual("Em transito");
                 for (auto s : selecionados) { s->setEmTransito(true); s->setLocalAtual("Em transito"); }
-
                 viagensEmAndamento.push_back(ViagemFicticia(veiculo, selecionados, o, d, caminhoRota, distTotalCalculada));
                 cout << "\n>>> PARTIDA REGISTRADA!\n";
                 break;
             }
+            case 6:
+                cout << "\n--- CIDADES CADASTRADAS --- \n";
+                for (size_t i = 0; i < cidadesCadastradas.size(); ++i) cout << i+1 << ". " << cidadesCadastradas[i].getNome() << "\n";
+                break;
             case 7:
                 cout << "\n--- PASSAGEIROS --- \n";
                 for (const auto& p : passageirosCadastrados) cout << "- " << p.getNome() << " (Local: " << p.getLocalAtual() << (p.isEmTransito() ? " [EM VIAGEM]" : "") << ")\n";
@@ -234,9 +152,7 @@ void executarSistemaFicticio() {
                 if (viagensEmAndamento.empty()) cout << "Nenhuma viagem ativa.\n";
                 for (const auto& v : viagensEmAndamento) {
                     cout << "- " << v.veiculo->getNome() << " [" << v.origem << " -> " << v.destino << "] - Rota: ";
-                    for(size_t i = 0; i < v.rotaCompleta.size(); ++i) {
-                        cout << v.rotaCompleta[i] << (i == v.rotaCompleta.size()-1 ? "" : " -> ");
-                    }
+                    for(size_t i = 0; i < v.rotaCompleta.size(); ++i) cout << v.rotaCompleta[i] << (i == v.rotaCompleta.size()-1 ? "" : " -> ");
                     cout << " | Progresso: " << v.kmPercorridos << "/" << v.distanciaTotal << " Km\n";
                 }
                 break;
@@ -249,5 +165,7 @@ void executarSistemaFicticio() {
                 break;
             }
         }
+        // Salvamento automático persistente a cada operação
+        salvarDados(cidadesCadastradas, trajetosCadastrados, transportesCadastrados, passageirosCadastrados, viagensEmAndamento);
     }
 }
